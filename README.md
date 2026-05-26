@@ -53,19 +53,19 @@ pip install -r requirements.txt
 
 ```bash
 # Single volume
-python synthesize_ulf.py input.nii.gz output.nii.gz
+python simulate_ulf.py input.nii.gz output.nii.gz
 
 # Folder of NIfTI files
-python synthesize_ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
+python simulate_ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
 
 # Reproducible seed
-python synthesize_ulf.py input.nii.gz output.nii.gz --seed 42
+python simulate_ulf.py input.nii.gz output.nii.gz --seed 42
 ```
 
 ### Python API
 
 ```python
-from synthesize_ulf import simulate_ulf
+from simulate_ulf import simulate_ulf
 
 # Generate one ULF volume with random parameters
 ulf_volume, affine, header, params = simulate_ulf("input.nii.gz")
@@ -74,7 +74,7 @@ ulf_volume, affine, header, params = simulate_ulf("input.nii.gz")
 ulf_volume, affine, header, params = simulate_ulf("input.nii.gz", seed=42)
 
 # Custom parameters
-from synthesize_ulf import sample_params
+from simulate_ulf import sample_params
 params = sample_params()
 params["signal_target"] = 30
 ulf_volume, affine, header, params = simulate_ulf("input.nii.gz", params=params)
