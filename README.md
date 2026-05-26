@@ -21,8 +21,8 @@ Ultra-low-field (ULF) MRI enables portable and accessible neuroimaging, but suff
 The ULF synthesis module models the key physical phenomena distinguishing ULF from HF acquisitions:
 
 |  | Effect | Implementation |
-|---|---|---|
-| 1 | **Signal scaling** | $(B_{ULF}/B_{HF})^2$ polarization ratio |
+|:---:|---|---|
+| 1 | **Signal scaling** | $(B_{{ULF}}/B_{{HF}})^2$ polarization ratio |
 | 2 | **T2\* decay & B0 inhomogeneity** | Spatially-varying exponential decay from random B0 field maps |
 | 3 | **Thermal noise** | Gaussian noise scaled to SNR 15–50 |
 | 4 | **k-space cropping** | Reduced resolution (45–55%) |
@@ -49,24 +49,35 @@ cd ULF-Synth
 pip install -r requirements.txt
 ```
 
-### Synthesizing ULF images
-
-Single volume:
+### CLI
 
 ```bash
-python synthesize-ulf.py input.nii.gz output.nii.gz
+# Single volume
+python synthesize_ulf.py input.nii.gz output.nii.gz
+
+# Folder of NIfTI files
+python synthesize_ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
+
+# Reproducible seed
+python synthesize_ulf.py input.nii.gz output.nii.gz --seed 42
 ```
 
-Folder of NIfTI files:
+### Python API
 
-```bash
-python synthesize-ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
-```
+```python
+from synthesize_ulf import simulate_ulf
 
-Reproducible seed:
+# Generate one ULF volume with random parameters
+ulf_volume, affine, header, params = simulate_ulf("input.nii.gz")
 
-```bash
-python synthesize-ulf.py input.nii.gz output.nii.gz --seed 42
+# With a fixed seed
+ulf_volume, affine, header, params = simulate_ulf("input.nii.gz", seed=42)
+
+# Custom parameters
+from synthesize_ulf import sample_params
+params = sample_params()
+params["signal_target"] = 30
+ulf_volume, affine, header, params = simulate_ulf("input.nii.gz", params=params)
 ```
 
 Output preserves the input affine and header metadata.
