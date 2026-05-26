@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/method.png" alt="ULF-Synth pipeline" width="100%">
+  <img src="assets/method.png" alt="ULF-Synth" width="100%">
 </p>
 
 <h1 align="center">ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</h1>
@@ -10,32 +10,38 @@
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python"></a>
 </p>
 
-<p align="center">
-  <b>Synthesize realistic ultra-low-field (ULF) MRI from high-field (HF) scans using physics-guided degradation modeling.</b>
-</p>
+## Abstract
 
-<hr>
+Ultra-low-field (ULF) MRI enables portable and accessible neuroimaging, but suffers from low signal-to-noise ratio and limited spatial resolution relative to high-field (HF) systems. Acquiring paired ULF–HF data for supervised enhancement is often infeasible, particularly in resource-limited settings. We introduce **ULF-Synth**, a framework combining: (i) acquisition-based synthesis of realistic ULF images from HF volumes for large-scale paired training, and (ii) a spatial-frequency domain objective that prioritizes recovery of high-frequency anatomical detail. The formulation is architecture-agnostic, consistently improving structural similarity and perceptual fidelity across encoder-decoder, adversarial, and diffusion-based translation models. Trained exclusively on synthetic data, our models generalize to real 64 mT ULF acquisitions, improving multiclass brain segmentation and achieving higher radiologist preference and diagnostic acceptability in a blinded reader study.
 
-## Overview
+---
 
-**ULF-Synth** is a Python pipeline that converts high-field (HF, 1.5T/3T) structural MRI into synthetic ultra-low-field (ULF, 64 mT) images for pediatric neuroimaging research. It simulates the key physical effects that degrade image quality at low field strengths, enabling training and evaluation of ULF-enhancement methods without requiring a physical ULF scanner.
+## Synthesis Pipeline
 
-The synthesis pipeline models the following physical phenomena:
+The ULF synthesis module models the key physical phenomena distinguishing ULF from HF acquisitions:
 
-| Effect | Implementation |
-|---|---|
-| **Signal scaling** | $(B_{ULF} / B_{HF})^2$ polarization ratio |
-| **T2\* decay & B0 inhomogeneity** | Spatially-varying exponential decay from random B0 field maps |
-| **Thermal noise** | Gaussian noise scaled to realistic SNR (15–50) |
-| **k-space cropping** | Reduced resolution 45–55% of original |
-| **k-space undersampling** | Accelerated acquisition (2×–3×) with center-out sampling |
-| **B0 off-resonance distortion** | Phase distortion from random B0 field maps |
+|  | Effect | Implementation |
+|---|---|---|
+| 1 | **Signal scaling** | $(B_{ULF}/B_{HF})^2$ polarization ratio |
+| 2 | **T2\* decay & B0 inhomogeneity** | Spatially-varying exponential decay from random B0 field maps |
+| 3 | **Thermal noise** | Gaussian noise scaled to SNR 15–50 |
+| 4 | **k-space cropping** | Reduced resolution (45–55%) |
+| 5 | **k-space undersampling** | Accelerated acquisition (2×–3×) with center-out sampling |
+| 6 | **B0 off-resonance distortion** | Phase distortion from random B0 field maps |
+
+---
+
+## Qualitative Results
 
 <p align="center">
   <img src="assets/results.png" alt="Sample results" width="95%">
 </p>
 
-## Installation
+---
+
+## Getting Started
+
+### Installation
 
 ```bash
 git clone https://github.com/toufiqmusah/ULF-Synth.git
@@ -43,40 +49,40 @@ cd ULF-Synth
 pip install -r requirements.txt
 ```
 
-**Dependencies:** `numpy`, `nibabel`, `scipy`
+### Synthesizing ULF images
 
-## Usage
-
-Synthesize a single ULF volume:
+Single volume:
 
 ```bash
 python synthesize-ulf.py input.nii.gz output.nii.gz
 ```
 
-Process an entire folder of NIfTI files:
+Folder of NIfTI files:
 
 ```bash
 python synthesize-ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
 ```
 
-With a fixed random seed for reproducibility:
+Reproducible seed:
 
 ```bash
 python synthesize-ulf.py input.nii.gz output.nii.gz --seed 42
 ```
 
-The output is a NIfTI file containing the synthetic ULF image (preserving the input's affine and header metadata).
+Output preserves the input affine and header metadata.
+
+---
 
 ## Roadmap
 
 - [x] Physics-guided ULF synthesis pipeline
-- [ ] **Pre-trained weights** — enhancement models for ULF→HF mapping
-- [ ] **Python package** — `pip install ulf-synth`
-- [ ] **Docker image** — zero-config containerized pipeline
+- [ ] Pre-trained enhancement weights — ULF→HF restoration models
+- [ ] Python package — `pip install ulf-synth`
+- [ ] Docker image — zero-config containerized pipeline
+
+---
 
 ## Citation
-
-If you use ULF-Synth in your research, please cite:
 
 ```bibtex
 @misc{musah2026ulfsynth,
@@ -84,11 +90,13 @@ If you use ULF-Synth in your research, please cite:
   author       = {Toufiq Musah and Salvatore Calcagno and Federica Proietto Salanitri and Xiaomeng Li and Maruf Adewole and Marawan Elbatel},
   year         = {2026},
   eprint       = {2605.24625},
-  archivePrefix= {arXiv},
+  archivePrefix = {arXiv},
   url          = {https://arxiv.org/abs/2605.24625}
 }
 ```
 
+---
+
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+[MIT](LICENSE)
