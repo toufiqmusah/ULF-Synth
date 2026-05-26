@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging"
+authors:
+  - given-names: Toufiq
+    family-names: Musah
+  - given-names: Salvatore
+    family-names: Calcagno
+  - given-names: Federica
+    family-names: Proietto Salanitri
+  - given-names: Xiaomeng
+    family-names: Li
+  - given-names: Maruf
+    family-names: Adewole
+  - given-names: Marawan
+    family-names: Elbatel
+identifiers:
+  - type: url
+    value: "https://arxiv.org/abs/2605.24625"
+date-released: 2026
+url: "https://github.com/toufiqmusah/ULF-Synth"
+repository-code: "https://github.com/toufiqmusah/ULF-Synth"
+license: "MIT"
+keywords:
+  - MRI
+  - ultra-low-field
+  - neuroimaging
+  - pediatric
+  - synthesis
+  - physics-guided
