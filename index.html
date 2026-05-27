@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ULF-Synth</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fafafa;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ─── Header ─── */
+  header {
+    padding: 80px 0 40px;
+    border-bottom: 2px solid #1a1a1a;
+    margin-bottom: 64px;
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+    margin-bottom: 16px;
+    max-width: 800px;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+  }
+
+  .meta a {
+    color: #1a1a1a;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 4px 12px;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+    transition: background .15s, color .15s;
+  }
+
+  .meta a:hover {
+    background: #1a1a1a;
+    color: #fafafa;
+  }
+
+  .meta .badge {
+    border: none;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .authors {
+    font-size: 0.95rem;
+    color: #444;
+    margin-top: 12px;
+  }
+
+  .authors strong {
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .authors strong a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid #ccc;
+    transition: border-color .15s;
+  }
+
+  .authors strong a:hover {
+    border-color: #1a1a1a;
+  }
+
+  /* ─── Sections ─── */
+  section {
+    margin-bottom: 64px;
+  }
+
+  section h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ccc;
+  }
+
+  section p {
+    color: #333;
+    margin-bottom: 16px;
+  }
+
+  section p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ─── Figure ─── */
+  figure {
+    margin: 32px 0;
+  }
+
+  figure img {
+    width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    display: block;
+  }
+
+  figure figcaption {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+  }
+
+  /* ─── Grid (pipeline) ─── */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 24px 0;
+  }
+
+  .pipeline-item {
+    border-top: 2px solid #1a1a1a;
+    padding-top: 12px;
+  }
+
+  .pipeline-item .num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #999;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .pipeline-item h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .pipeline-item p {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0;
+  }
+
+  /* ─── Code ─── */
+  .code-block {
+    margin: 16px 0;
+  }
+
+  .code-block .code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: #2a2a2a;
+    border-radius: 6px 6px 0 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+  }
+
+  .code-block .code-header .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .code-block .code-header .dot:nth-child(1) { background: #ff5f56; }
+  .code-block .code-header .dot:nth-child(2) { background: #ffbd2e; }
+  .code-block .code-header .dot:nth-child(3) { background: #27c93f; }
+
+  .code-block .code-header .label {
+    margin-left: 4px;
+  }
+
+  .code-block pre {
+    background: #1a1a1a;
+    padding: 20px 24px;
+    font-size: 0.82rem;
+    overflow-x: auto;
+    border-radius: 0 0 6px 6px;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+    line-height: 1.65;
+    color: #e6e6e6;
+    tab-size: 2;
+  }
+
+  .code-block pre .cm {
+    color: #5c6370;
+    font-style: italic;
+  }
+
+  .code-block pre .kw {
+    color: #c678dd;
+  }
+
+  .code-block pre .str {
+    color: #98c379;
+  }
+
+  .code-block pre .fn {
+    color: #61afef;
+  }
+
+  code:not(.code-block code) {
+    font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+    font-size: 0.85em;
+    background: #eee;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  /* ─── Citation ─── */
+  .citation {
+    background: #eee;
+    padding: 20px 24px;
+    font-size: 0.82rem;
+    font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* ─── Footer ─── */
+  footer {
+    padding: 32px 0 48px;
+    border-top: 1px solid #ddd;
+    font-size: 0.8rem;
+    color: #999;
+    text-align: center;
+  }
+
+  footer a {
+    color: #666;
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 640px) {
+    header { padding: 48px 0 32px; }
+    header h1 { font-size: 1.6rem; }
+    .pipeline-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+  <h1>ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</h1>
+  <div class="meta">
+    <a class="badge" href="https://arxiv.org/abs/2605.24625"><img src="https://img.shields.io/badge/arXiv-2605.24625-b31b1b.svg" alt="arXiv"></a>
+    <a href="https://github.com/toufiqmusah/ULF-Synth">GitHub</a>
+    <a href="https://arxiv.org/abs/2605.24625">Paper</a>
+    <a href="https://opensource.org/licenses/MIT">MIT License</a>
+  </div>
+  <div class="authors">
+    <strong><a href="https://toufiqmusah.github.io">Toufiq Musah</a></strong> &middot;
+    Salvatore Calcagno &middot;
+    Federica Proietto Salanitri &middot;
+    Xiaomeng Li &middot;
+    Maruf Adewole &middot;
+    Marawan Elbatel
+  </div>
+</header>
+
+<section>
+  <h2>Abstract</h2>
+  <p>Ultra-low-field (ULF) MRI enables portable and accessible neuroimaging, but suffers from low signal-to-noise ratio and limited spatial resolution relative to high-field (HF) systems. Acquiring paired ULF–HF data for supervised enhancement is often infeasible, particularly in resource-limited settings. We introduce <strong>ULF-Synth</strong>, a framework combining: (i) acquisition-based synthesis of realistic ULF images from HF volumes for large-scale paired training, and (ii) a spatial-frequency domain objective that prioritizes recovery of high-frequency anatomical detail. The formulation is architecture-agnostic, consistently improving structural similarity and perceptual fidelity across encoder-decoder, adversarial, and diffusion-based translation models. Trained exclusively on synthetic data, our models generalize to real 64&nbsp;mT ULF acquisitions, improving multiclass brain segmentation and achieving higher radiologist preference and diagnostic acceptability in a blinded reader study.</p>
+</section>
+
+<section>
+  <h2>Method</h2>
+  <figure>
+    <img src="assets/method.png" alt="ULF-Synth method overview">
+    <figcaption>Figure 1: ULF-Synth framework overview. (a) HF volumes are degraded via sequential image- and k-space operations to generate synthetic ULF pairs. (b) Real ULF scans are enhanced and passed to a segmentation model for downstream evaluation. (c) Framework components.</figcaption>
+  </figure>
+
+  <p>The ULF synthesis module models the key physical phenomena distinguishing ULF from HF acquisitions:</p>
+
+  <div class="pipeline-grid">
+    <div class="pipeline-item">
+      <div class="num">01</div>
+      <h3>Signal scaling</h3>
+      <p>(B<sub>ULF</sub>/B<sub>HF</sub>)<sup>2</sup> polarization ratio</p>
+    </div>
+    <div class="pipeline-item">
+      <div class="num">02</div>
+      <h3>T2* decay &amp; B0 inhomogeneity</h3>
+      <p>Spatially-varying exponential decay from random B0 field maps</p>
+    </div>
+    <div class="pipeline-item">
+      <div class="num">03</div>
+      <h3>Thermal noise</h3>
+      <p>Gaussian noise scaled to SNR 15–50</p>
+    </div>
+    <div class="pipeline-item">
+      <div class="num">04</div>
+      <h3>k-space cropping</h3>
+      <p>Reduced resolution (45–55%)</p>
+    </div>
+    <div class="pipeline-item">
+      <div class="num">05</div>
+      <h3>k-space undersampling</h3>
+      <p>Accelerated acquisition (2×–3×) with center-out sampling</p>
+    </div>
+    <div class="pipeline-item">
+      <div class="num">06</div>
+      <h3>B0 off-resonance distortion</h3>
+      <p>Phase distortion from random B0 field maps</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Results</h2>
+  <figure>
+    <img src="assets/results.png" alt="Qualitative results">
+    <figcaption>Figure 2: Qualitative comparison of ULF image enhancement on synthetic and real clinical ULF acquisitions.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Usage</h2>
+
+  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px;">Installation</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="label">Terminal</span>
+    </div>
+    <pre><span class="cm"># Clone and install</span>
+git clone https://github.com/toufiqmusah/ULF-Synth.git
+cd ULF-Synth
+pip install -r requirements.txt</pre>
+  </div>
+
+  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">CLI</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="label">Terminal</span>
+    </div>
+    <pre><span class="cm"># Single volume</span>
+python simulate_ulf.py input.nii.gz output.nii.gz
+
+<span class="cm"># Folder of NIfTI files</span>
+python simulate_ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
+
+<span class="cm"># Reproducible seed</span>
+python simulate_ulf.py input.nii.gz output.nii.gz --seed 42</pre>
+  </div>
+
+  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">Python API</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="label">Python</span>
+    </div>
+    <pre><span class="kw">from</span> simulate_ulf <span class="kw">import</span> simulate_ulf
+
+ulf_volume, affine, header, params = <span class="fn">simulate_ulf</span>(<span class="str">"input.nii.gz"</span>)
+ulf_volume, affine, header, params = <span class="fn">simulate_ulf</span>(<span class="str">"input.nii.gz"</span>, seed=<span class="str">42</span>)</pre>
+  </div>
+</section>
+
+<section>
+  <h2>Citation</h2>
+  <div class="citation">@misc{musah2026ulfsynth,
+  title        = {ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging},
+  author       = {Toufiq Musah and Salvatore Calcagno and Federica Proietto Salanitri and Xiaomeng Li and Maruf Adewole and Marawan Elbatel},
+  year         = {2026},
+  eprint       = {2605.24625},
+  archivePrefix = {arXiv},
+  url          = {https://arxiv.org/abs/2605.24625}
+}</div>
+</section>
+
+<footer>
+  <a href="https://toufiqmusah.github.io">Toufiq Musah</a> &middot;
+  <a href="https://github.com/toufiqmusah/ULF-Synth">GitHub</a> &middot;
+  <a href="https://arxiv.org/abs/2605.24625">arXiv</a> &middot;
+  MIT License
+</footer>
+
+</div>
+</body>
+</html>
