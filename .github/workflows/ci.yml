@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Verify imports
+        run: |
+          python -c "
+          from ulfsynth import __version__
+          from ulfsynth.simulate import simulate_ulf, simulate_file, simulate_folder, sample_params
+          from ulfsynth.enhance import enhance_file, enhance_folder
+          from ulfsynth.cli import main
+          print(f'ulfsynth {__version__} imports OK')
+          "
+
+      - name: Verify CLI entry points
+        run: |
+          ulfsynth --help
+          ulfsynth simulate --help
+          ulfsynth enhance --help
+          ulfsynth download-weights --help
+
+      - name: Test simulation pipeline
+        run: |
+          python -c "
+          import nibabel as nib, numpy as np
+          data = np.random.uniform(0, 1000, (16, 16, 16)).astype(np.float32)
+          nib.save(nib.Nifti1Image(data, np.eye(4)), '/tmp/test_hf.nii.gz')
+          from ulfsynth.simulate import simulate_file, simulate_folder
+          p = simulate_file('/tmp/test_hf.nii.gz', '/tmp/test_ulf.nii.gz', seed=42, verbose=False)
+          assert 'T2' in p, 'simulate_file should return params dict'
+          import tempfile, os
+          with tempfile.TemporaryDirectory() as indir, tempfile.TemporaryDirectory() as outdir:
+              for i in range(2):
+                  nib.save(nib.Nifti1Image(
+                      np.random.uniform(0, 1000, (16, 16, 16)).astype(np.float32), np.eye(4)),
+                      os.path.join(indir, f'v{i}.nii.gz'))
+              results = simulate_folder(indir, outdir, seed=42, verbose=False)
+              assert len(results) == 2, 'simulate_folder should return list of params'
+          print('Simulation pipeline OK')
+          "
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint ulfsynth package
+        run: ruff check ulfsynth/
+
+  pypi-publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install build
+      - name: Build distributions
+        run: python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
