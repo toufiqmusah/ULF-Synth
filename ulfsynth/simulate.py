@@ -16,8 +16,8 @@ B_ULF = 0.064
 POLAR_SCALE = (B_ULF / B_HF) ** 2
 
 
-def to_kspace(I):
-    return fftshift(fftn(I))
+def to_kspace(vol):
+    return fftshift(fftn(vol))
 
 
 def to_ispace(K):
@@ -28,9 +28,9 @@ def to_complex_ispace(K):
     return ifftn(ifftshift(K))
 
 
-def object_mask(I, thresh=0.05):
-    I_norm = (I - I.min()) / (I.max() - I.min() + 1e-8)
-    return I_norm > thresh
+def object_mask(vol, thresh=0.05):
+    normed = (vol - vol.min()) / (vol.max() - vol.min() + 1e-8)
+    return normed > thresh
 
 
 def apply_b0_t2star_decay(I_complex, T2, TE, b0_strength, smoothness, k, eps=1e-6):

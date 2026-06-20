@@ -5,9 +5,13 @@ nnunetv2 fork (src/nn-translation/) as a dependency.  For PyPI builds
 the fork is handled via the ``[enhance]`` extra.
 """
 
+import sys
 from pathlib import Path
 
 from setuptools import setup
+
+if sys.version_info < (3, 10):
+    sys.exit(f"ulfsynth requires Python >= 3.10, found {sys.version}")
 
 HERE = Path(__file__).resolve().parent
 NNUNET_FORK = HERE / "src" / "nn-translation"
