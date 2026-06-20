@@ -7,11 +7,8 @@ translation inference to produce enhanced (HF-like) volumes.
 
 import os
 import shutil
-import subprocess
-import sys
 import tempfile
 import urllib.request
-from pathlib import Path
 
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "ulfsynth")
 WEIGHTS_REPO = "https://huggingface.co/toufiqmusah/ulfsynth-weights/resolve/main"
@@ -26,28 +23,29 @@ WEIGHT_FILES = [
 
 
 def _ensure_nnunet():
-    """Import nnunetv2 or raise a clear error with install instructions."""
+    """Import nnunetv2 (fork with MRCT kspace trainer) or raise a clear error."""
     try:
         import nnunetv2  # noqa: F401
     except ImportError:
-        # Look for the bundled fork relative to this package
-        here = Path(__file__).resolve().parent
-        for candidate in [here.parent / "src" / "nn-translation",
-                          here / "_nnunet",
-                          Path.cwd() / "src" / "nn-translation"]:
-            if (candidate / "setup.py").exists() or (candidate / "pyproject.toml").exists():
-                print(f"Installing nnunetv2 fork from {candidate}...")
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", "-e", str(candidate)],
-                )
-                import nnunetv2  # noqa: F401
-                return
         raise ImportError(
-            "nnunetv2 is required for enhancement. Install it with:\n\n"
-            f"    pip install -e {here.parent / 'src' / 'nn-translation'}\n\n"
-            "Or if you installed ulfsynth from PyPI:\n\n"
-            "    pip install ulfsynth[enhance]\n"
-            "    pip install nnunetv2\n"
+            "nnunetv2 (fork with MRCT kspace trainer) is required for enhancement.\n\n"
+            "  pip install 'ulfsynth[enhance]'\n\n"
+            "This installs the custom fork automatically. If you already installed\n"
+            "the official nnunetv2, uninstall it first:\n\n"
+            "  pip uninstall nnunetv2\n"
+            "  pip install 'ulfsynth[enhance]'\n"
+        )
+    # Verify the custom trainer is available (not the upstream nnunetv2)
+    try:
+        from nnunetv2.training.nnUNetTrainer.nnUNetTrainerMRCT_kspace import (  # noqa: F401
+            nnUNetTrainerMRCT_kspace,
+        )
+    except ImportError:
+        raise ImportError(
+            "You have the upstream nnunetv2 installed, but ulfsynth needs the custom\n"
+            "fork with the MRCT kspace trainer.\n\n"
+            "  pip uninstall nnunetv2\n"
+            "  pip install 'ulfsynth[enhance]'\n"
         )
 
 

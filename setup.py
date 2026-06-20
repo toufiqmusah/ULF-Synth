@@ -37,12 +37,15 @@ def get_install_requires():
 
 def get_extras_require():
     return {
-        "enhance": ["nnunetv2>=2.5"],
+        "enhance": [
+            "nnunetv2 @ git+https://github.com/toufiqmusah/ULF-Synth.git@main"
+            "#subdirectory=src/nn-translation",
+        ],
     }
 
 
 setup(
-    version="0.1.0",
+    version="0.1.1",
     description="Physics-Guided Ultra-Low-Field MRI Enhancement & Simulation",
     install_requires=get_install_requires(),
     extras_require=get_extras_require(),
