@@ -3,4 +3,8 @@ include README.md
 include pyproject.toml
 include setup.py
 recursive-include ulfsynth *.py
+recursive-include ulfsynth/_nnunet_src *
 recursive-include assets *
+prune ulfsynth/_nnunet_src/nnunetv2.egg-info
+prune ulfsynth/_nnunet_src/notebooks
+prune ulfsynth/_nnunet_src/documentation

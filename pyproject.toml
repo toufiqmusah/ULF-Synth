@@ -43,3 +43,6 @@ ulfsynth = "ulfsynth.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["ulfsynth*"]
+
+[tool.ruff]
+exclude = ["ulfsynth/_nnunet_src"]
