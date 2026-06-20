@@ -3,5 +3,4 @@ include README.md
 include pyproject.toml
 include setup.py
 recursive-include ulfsynth *.py
-recursive-include src/nn-translation *
 recursive-include assets *

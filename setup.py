@@ -17,6 +17,11 @@ HERE = Path(__file__).resolve().parent
 NNUNET_FORK = HERE / "src" / "nn-translation"
 
 
+def _is_local_dev():
+    """Return True when installing from the repo (editable), False for PyPI builds."""
+    return (HERE / ".git").exists()
+
+
 def get_install_requires():
     base = [
         "numpy>=1.21.0",
@@ -25,7 +30,7 @@ def get_install_requires():
         "torch>=2.1.0",
     ]
     has_fork = (NNUNET_FORK / "setup.py").exists() or (NNUNET_FORK / "pyproject.toml").exists()
-    if has_fork:
+    if has_fork and _is_local_dev():
         base.append(f"nnunetv2 @ {NNUNET_FORK.resolve().as_uri()}")
     return base
 
