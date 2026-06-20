@@ -124,6 +124,35 @@ git push --tags
 
 ---
 
+## Appendix: CI tips
+
+### Skip CI on a push
+
+Add `[skip ci]` to the commit message to skip all workflow runs:
+
+```bash
+git commit -m "typo fix [skip ci]"
+git push
+```
+
+Alternative markers: `[ci skip]`, `[no ci]`, `skip-checks: true`.
+
+### PyPI propagation time
+
+After `twine upload` or a successful CI publish, wait **1–2 minutes** before:
+
+```bash
+pip install ulfsynth
+```
+
+PyPI's CDN (Fastly) caches package metadata for a short time. If you get a "404 Not Found" immediately, wait 60s and try again.
+
+To install the very latest version after a publish:
+
+```bash
+pip install --upgrade ulfsynth
+```
+
 ## Summary checklist
 
 | Step | Done? |
