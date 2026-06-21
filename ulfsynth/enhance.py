@@ -66,25 +66,26 @@ def _run_inference(input_path, output_path, device="cuda"):
     _ensure_nnunet()
     weights_dir = _download_weights()
 
+    _dev = torch.device(device)
     from nnunetv2.inference.predict_from_raw_data import (
         nnUNetPredictor,
     )
 
-    predictor = nnUNetPredictor(
-        tile_step_size=0.5,
-        use_gaussian=True,
-        use_mirroring=True,
-        perform_everything_on_device=True,
-        device=torch.device(device),
-        verbose=False,
-        allow_tqdm=False,
-    )
-    predictor.initialize_from_trained_model_folder(
-        model_folder=os.path.join(weights_dir, MODEL_DIR),
-        use_folds=("all",),
-        checkpoint_name="checkpoint_best.pth",
-    )
     with open(os.devnull, "w") as _null, contextlib.redirect_stdout(_null):
+        predictor = nnUNetPredictor(
+            tile_step_size=0.5,
+            use_gaussian=True,
+            use_mirroring=True,
+            perform_everything_on_device=True,
+            device=_dev,
+            verbose=False,
+            allow_tqdm=False,
+        )
+        predictor.initialize_from_trained_model_folder(
+            model_training_output_dir=os.path.join(weights_dir, MODEL_DIR),
+            use_folds=("all",),
+            checkpoint_name="checkpoint_best.pth",
+        )
         predictor.predict_from_files(
             [[input_path]],
             [output_path],

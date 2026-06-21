@@ -7,4 +7,4 @@ Submodules:
   cli        — Command-line interface (ulfsynth simulate, ulfsynth enhance)
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
