@@ -1,10 +1,8 @@
 """
 Enhance ULF MRI volumes using pretrained restoration models.
-
-Downloads weights from HuggingFace on first use, then runs nnU-Net
-translation inference to produce enhanced (HF-like) volumes.
 """
 
+import contextlib
 import os
 import subprocess
 import sys
@@ -26,19 +24,17 @@ _BUNDLED_FORK = Path(__file__).resolve().parent / "_nnunet_src"
 
 
 def _ensure_nnunet():
-    """Import nnunetv2 (fork with MRCT kspace trainer), installing from bundled source if needed."""
     try:
         import nnunetv2  # noqa: F401
     except ImportError:
         if _BUNDLED_FORK.is_dir() and (_BUNDLED_FORK / "setup.py").exists():
-            print("Installing nnunetv2 fork from bundled source...")
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", str(_BUNDLED_FORK)],
+                [sys.executable, "-m", "pip", "install", "--quiet", str(_BUNDLED_FORK)],
             )
         else:
             raise ImportError(
-                "nnunetv2 (fork with MRCT kspace trainer) is required for enhancement.\n\n"
-                "Reinstall ulfsynth with the bundled fork:\n\n"
+                "Required translation module not found.\n"
+                "Reinstall ulfsynth:\n\n"
                 "  pip install --force-reinstall 'ulfsynth'\n"
             )
     try:
@@ -47,15 +43,13 @@ def _ensure_nnunet():
         )
     except ImportError:
         raise ImportError(
-            "You have the upstream nnunetv2 installed, but ulfsynth needs the custom\n"
-            "fork with the MRCT kspace trainer.\n\n"
-            "  pip uninstall nnunetv2\n"
+            "Incompatible translation module version.\n"
+            "Reinstall ulfsynth:\n\n"
             "  pip install --force-reinstall 'ulfsynth'\n"
         )
 
 
 def _download_weights(force=False):
-    """Download pretrained model weights from HuggingFace."""
     os.makedirs(CACHE_DIR, exist_ok=True)
     for rel_path in WEIGHT_FILES:
         dest = os.path.join(CACHE_DIR, rel_path)
@@ -63,18 +57,14 @@ def _download_weights(force=False):
             continue
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         url = f"{WEIGHTS_REPO}/{rel_path}"
-        print(f"Downloading {url} -> {dest}")
         urllib.request.urlretrieve(url, dest)
     return CACHE_DIR
 
 
 def _run_inference(input_path, output_path, device="cuda"):
-    """Run nnU-Net inference for a single file."""
+    import torch
     _ensure_nnunet()
     weights_dir = _download_weights()
-    os.environ["nnUNet_results"] = weights_dir
-    os.environ["nnUNet_raw"] = weights_dir
-    os.environ["nnUNet_preprocessed"] = weights_dir
 
     from nnunetv2.inference.predict_from_raw_data import (
         nnUNetPredictor,
@@ -85,28 +75,27 @@ def _run_inference(input_path, output_path, device="cuda"):
         use_gaussian=True,
         use_mirroring=True,
         perform_everything_on_device=True,
-        device=device,
+        device=torch.device(device),
         verbose=False,
+        allow_tqdm=False,
     )
     predictor.initialize_from_trained_model_folder(
         model_folder=os.path.join(weights_dir, MODEL_DIR),
         use_folds=("all",),
         checkpoint_name="checkpoint_best.pth",
     )
-    predictor.predict_from_files(
-        [[input_path]],
-        [output_path],
-        save_probabilities=False,
-        overwrite=True,
-        num_processes=2,
-    )
+    with open(os.devnull, "w") as _null, contextlib.redirect_stdout(_null):
+        predictor.predict_from_files(
+            [[input_path]],
+            [output_path],
+            save_probabilities=False,
+            overwrite=True,
+            num_processes=2,
+        )
 
 
 def enhance_file(input_path, output_path, device="cuda", verbose=True):
-    """Enhance a single ULF NIfTI file using the pretrained model."""
     _run_inference(input_path, output_path, device=device)
-    if verbose:
-        print(f"  {os.path.basename(input_path)} -> {output_path}")
 
 
 def enhance_folder(in_dir, out_dir, device="cuda", verbose=True):

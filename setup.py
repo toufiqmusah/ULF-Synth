@@ -11,7 +11,7 @@ if sys.version_info < (3, 10):
     sys.exit(f"ulfsynth requires Python >= 3.10, found {sys.version}")
 
 setup(
-    version="0.1.3",
+    version="0.1.4",
     description="Physics-Guided Ultra-Low-Field MRI Enhancement & Simulation",
     install_requires=[
         "numpy>=1.21.0",

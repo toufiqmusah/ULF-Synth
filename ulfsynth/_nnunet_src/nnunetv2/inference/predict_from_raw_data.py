@@ -55,7 +55,6 @@ class nnUNetPredictor(object):
         self.tile_step_size = tile_step_size
         # self.tile_step_size = 0.5
         use_mirroring = False
-        print("tile : ", self.tile_step_size, ", mirror=", use_mirroring)
         self.use_gaussian = use_gaussian
         self.use_mirroring = use_mirroring
         if device.type == 'cuda':
