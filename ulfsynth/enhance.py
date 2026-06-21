@@ -63,6 +63,9 @@ def _download_weights(force=False):
 
 def _run_inference(input_path, output_path, device="cuda"):
     import torch
+    os.environ.setdefault("nnUNet_raw", CACHE_DIR)
+    os.environ.setdefault("nnUNet_preprocessed", CACHE_DIR)
+    os.environ.setdefault("nnUNet_results", CACHE_DIR)
     _ensure_nnunet()
     weights_dir = _download_weights()
 
@@ -91,7 +94,8 @@ def _run_inference(input_path, output_path, device="cuda"):
             [output_path],
             save_probabilities=False,
             overwrite=True,
-            num_processes=2,
+            num_processes_preprocessing=2,
+            num_processes_segmentation_export=2,
         )
 
 
