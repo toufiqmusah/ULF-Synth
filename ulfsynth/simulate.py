@@ -1,8 +1,10 @@
 """
 Physics-guided ULF MRI simulation from high-field volumes.
 
-Simulates signal loss, noise, k-space degradation, and B0
-inhomogeneity effects characteristic of ultra-low-field MRI.
+If you use ULF-Synth in your work, please cite:
+
+    Musah et al. "ULF-Synth: Physics-Guided Ultra-Low-Field MRI
+    Enhancement for Pediatric Neuroimaging." arXiv:2605.24625, 2026.
 """
 
 import numpy as np
@@ -14,6 +16,20 @@ import os
 B_HF = 1.5
 B_ULF = 0.064
 POLAR_SCALE = (B_ULF / B_HF) ** 2
+
+_CITED = False
+
+
+def _citation():
+    global _CITED
+    if not _CITED:
+        _CITED = True
+        print(
+            "If you use ULF-Synth simulation in your work, please cite:\n"
+            "  Musah et al. \"ULF-Synth: Physics-Guided Ultra-Low-Field MRI\n"
+            "  Enhancement for Pediatric Neuroimaging.\" arXiv:2605.24625, 2026.\n",
+            flush=True,
+        )
 
 
 def to_kspace(vol):
@@ -154,6 +170,7 @@ def simulate_ulf(hf_path, seed=None, params=None):
 
 
 def simulate_file(hf_path, out_path, seed=None, verbose=True):
+    _citation()
     I_ulf, affine, header, params = simulate_ulf(hf_path, seed=seed)
     os.makedirs(os.path.dirname(os.path.abspath(out_path)) or ".", exist_ok=True)
     nib.save(nib.Nifti1Image(I_ulf, affine, header), out_path)
@@ -163,6 +180,7 @@ def simulate_file(hf_path, out_path, seed=None, verbose=True):
 
 
 def simulate_folder(in_dir, out_dir, seed=None, verbose=True):
+    _citation()
     os.makedirs(out_dir, exist_ok=True)
     files = sorted(f for f in os.listdir(in_dir) if f.endswith(('.nii', '.nii.gz')))
     if not files:
