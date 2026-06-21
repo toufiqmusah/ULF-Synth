@@ -1,10 +1,14 @@
 """
 Enhance ULF MRI volumes using pretrained restoration models.
+
+If you use ULF-Synth enhancement in your work, please cite:
+
+    Musah et al. "ULF-Synth: Physics-Guided Ultra-Low-Field MRI
+    Enhancement for Pediatric Neuroimaging." arXiv:2605.24625, 2026.
 """
 
 import contextlib
 import os
-import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -22,42 +26,46 @@ WEIGHT_FILES = [
 
 _BUNDLED_FORK = Path(__file__).resolve().parent / "_nnunet_src"
 
+_CITED = False
+
+
+def _citation():
+    global _CITED
+    if not _CITED:
+        _CITED = True
+        print(
+            "If you use ULF-Synth enhancement in your work, please cite:\n"
+            "  Musah et al. \"ULF-Synth: Physics-Guided Ultra-Low-Field MRI\n"
+            "  Enhancement for Pediatric Neuroimaging.\" arXiv:2605.24625, 2026.\n",
+            flush=True,
+        )
+
 
 def _ensure_nnunet():
-    try:
-        import nnunetv2  # noqa: F401
-    except ImportError:
-        if _BUNDLED_FORK.is_dir() and (_BUNDLED_FORK / "setup.py").exists():
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "--quiet", str(_BUNDLED_FORK)],
-            )
-        else:
-            raise ImportError(
-                "Required translation module not found.\n"
-                "Reinstall ulfsynth:\n\n"
-                "  pip install --force-reinstall 'ulfsynth'\n"
-            )
-    try:
-        from nnunetv2.training.nnUNetTrainer.nnUNetTrainerMRCT_kspace import (  # noqa: F401
-            nnUNetTrainerMRCT_kspace,
-        )
-    except ImportError:
-        raise ImportError(
-            "Incompatible translation module version.\n"
-            "Reinstall ulfsynth:\n\n"
-            "  pip install --force-reinstall 'ulfsynth'\n"
-        )
+    nn_path = str(_BUNDLED_FORK)
+    if nn_path not in sys.path:
+        sys.path.insert(0, nn_path)
+    import nnunetv2  # noqa: F401
+    from nnunetv2.training.nnUNetTrainer.nnUNetTrainerMRCT_kspace import (  # noqa: F401
+        nnUNetTrainerMRCT_kspace,
+    )
 
 
 def _download_weights(force=False):
     os.makedirs(CACHE_DIR, exist_ok=True)
+    new = []
     for rel_path in WEIGHT_FILES:
         dest = os.path.join(CACHE_DIR, rel_path)
         if os.path.exists(dest) and not force:
             continue
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         url = f"{WEIGHTS_REPO}/{rel_path}"
-        urllib.request.urlretrieve(url, dest)
+        new.append((url, dest))
+    if new:
+        print("Downloading enhancement weights... ", end="", flush=True)
+        for url, dest in new:
+            urllib.request.urlretrieve(url, dest)
+        print("done.", flush=True)
     return CACHE_DIR
 
 
@@ -67,7 +75,7 @@ def _run_inference(input_path, output_path, device="cuda"):
     os.environ.setdefault("nnUNet_preprocessed", CACHE_DIR)
     os.environ.setdefault("nnUNet_results", CACHE_DIR)
     _ensure_nnunet()
-    weights_dir = _download_weights()
+    _download_weights()
 
     _dev = torch.device(device)
     from nnunetv2.inference.predict_from_raw_data import (
@@ -85,7 +93,7 @@ def _run_inference(input_path, output_path, device="cuda"):
             allow_tqdm=False,
         )
         predictor.initialize_from_trained_model_folder(
-            model_training_output_dir=os.path.join(weights_dir, MODEL_DIR),
+            model_training_output_dir=os.path.join(CACHE_DIR, MODEL_DIR),
             use_folds=("all",),
             checkpoint_name="checkpoint_best.pth",
         )
@@ -98,13 +106,21 @@ def _run_inference(input_path, output_path, device="cuda"):
             num_processes_segmentation_export=2,
         )
 
+    for f in Path(output_path).parent.glob("predict_from_raw_data_args.json"):
+        f.unlink(missing_ok=True)
+    for f in Path(output_path).parent.glob("dataset.json"):
+        f.unlink(missing_ok=True)
+    for f in Path(output_path).parent.glob("plans.json"):
+        f.unlink(missing_ok=True)
+
 
 def enhance_file(input_path, output_path, device="cuda", verbose=True):
+    _citation()
     _run_inference(input_path, output_path, device=device)
 
 
 def enhance_folder(in_dir, out_dir, device="cuda", verbose=True):
-    """Enhance all NIfTI files in a folder."""
+    _citation()
     os.makedirs(out_dir, exist_ok=True)
     files = sorted(f for f in os.listdir(in_dir) if f.endswith(('.nii', '.nii.gz')))
     if not files:

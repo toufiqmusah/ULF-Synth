@@ -558,7 +558,7 @@ class nnUNetPredictor(object):
 
         vol = torch.zeros((data.shape),dtype=torch.float32)
         n_predictions = torch.zeros(data.shape[1:], dtype=torch.float32)
-        for sl in tqdm(slicers):
+        for sl in tqdm(slicers, disable=not self.allow_tqdm):
             workon = data[sl][None]
             workon = workon.to(self.device, non_blocking=False)
             prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
@@ -569,7 +569,6 @@ class nnUNetPredictor(object):
         return vol.half()
 
     def rec_center(self, slicers, data, crop=8):
-        print("rec_mean with fixed-center crop | UNDER CONSTRUCTION")
         device = self.device
         with torch.no_grad():
             data = data.to(device, non_blocking=True)
@@ -589,7 +588,7 @@ class nnUNetPredictor(object):
                 slice(cx, patch_size[2] - cx),
             )
 
-            for sl in tqdm(slicers):
+            for sl in tqdm(slicers, disable=not self.allow_tqdm):
                 workon = data[sl].unsqueeze(0)
                 pred = self._internal_maybe_mirror_and_predict(workon)[0]
                 pred_center = pred[0][inner]
@@ -613,7 +612,7 @@ class nnUNetPredictor(object):
 
         vol = torch.zeros((max_layers, *data.shape),dtype=torch.float32)
         iii=0
-        for sl in tqdm(slicers):
+        for sl in tqdm(slicers, disable=not self.allow_tqdm):
             workon = data[sl][None]
             workon = workon.to(self.device, non_blocking=False)
             prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
@@ -630,7 +629,6 @@ class nnUNetPredictor(object):
             if torch.sum(vol[layer])==0:
                 if layer >= max_layers-1:
                     raise Exception("max_layers in median reconstruction is too low!")
-                print("nb layer used for rec_median : ", layer)
                 break
 
         vol = torch.where(vol == 0, torch.tensor(float('nan')), vol)
@@ -667,7 +665,6 @@ class nnUNetPredictor(object):
                                             device=results_device)
 
             if self.verbose: print('running prediction')
-            if not self.allow_tqdm and self.verbose: print(f'{len(slicers)} steps')
             # for sl in tqdm(slicers, disable=not self.allow_tqdm): 
             #     workon = data[sl][None]
             #     workon = workon.to(self.device, non_blocking=False)
@@ -684,13 +681,10 @@ class nnUNetPredictor(object):
             # predicted_logits /= n_predictions
 
             if reconstruction_mode == "mean":
-                print("Reconstruction: MEAN")
                 predicted_logits = self.rec_mean(slicers, data)
             elif reconstruction_mode == "center_mean":
-                print("Reconstruction: CENTER MEAN")
                 predicted_logits = self.rec_center(slicers, data)
             elif reconstruction_mode == "median":
-                print("Reconstruction: MEDIAN")
                 predicted_logits = self.rec_median(slicers, data)
             else:
                 raise ValueError(f"Unknown reconstruction mode: {reconstruction_mode}")
