@@ -26,3 +26,6 @@ paper.md
 *.swo
 
 CONTRIBUTING.md
+
+# Sphinx docs build output
+docs/_build/
