@@ -1,0 +1,152 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enhancement &mdash; ULF-Synth 0.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=ca7ad2ea"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Citation" href="citation.html" />
+    <link rel="prev" title="Simulation Pipeline" href="simulation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ULF-Synth
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command-Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulation Pipeline</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Enhancement</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#device-selection">Device selection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="citation.html">Citation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ULF-Synth</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Enhancement</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="enhancement">
+<h1>Enhancement<a class="headerlink" href="#enhancement" title="Link to this heading"></a></h1>
+<p>The enhancement module restores ULF volumes using a pretrained
+nnUNet-based translation model trained with the ULF-Synth simulation
+pipeline (synthetic paired data).</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ulfsynth.enhance</span><span class="w"> </span><span class="kn">import</span> <span class="n">enhance_file</span><span class="p">,</span> <span class="n">enhance_folder</span>
+
+<span class="c1"># Single file (CPU)</span>
+<span class="n">enhance_file</span><span class="p">(</span><span class="s2">&quot;ulf_scan.nii.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;enhanced.nii.gz&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+<span class="c1"># Batch folder (GPU)</span>
+<span class="n">enhance_folder</span><span class="p">(</span><span class="s2">&quot;ulf_scans/&quot;</span><span class="p">,</span> <span class="s2">&quot;enhanced_scans/&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="how-it-works">
+<h2>How it works<a class="headerlink" href="#how-it-works" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Weight download</strong> — on first call, pretrained model weights are
+downloaded from HuggingFace and cached at <code class="docutils literal notranslate"><span class="pre">~/.cache/ulfsynth/</span></code>.</p></li>
+<li><p><strong>nnUNet fork</strong> — a custom nnUNetv2 fork with the MRCT k-space
+trainer is bundled inside the package and loaded directly from the
+vendored source.</p></li>
+<li><p><strong>Inference</strong> — the pretrained model runs sliding-window prediction
+with the appropriate reconstruction mode (mean aggregation).</p></li>
+</ol>
+</section>
+<section id="device-selection">
+<h2>Device selection<a class="headerlink" href="#device-selection" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">enhance_file</span><span class="p">(</span><span class="s2">&quot;input.nii.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;output.nii.gz&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>   <span class="c1"># GPU</span>
+<span class="n">enhance_file</span><span class="p">(</span><span class="s2">&quot;input.nii.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;output.nii.gz&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>    <span class="c1"># CPU</span>
+<span class="n">enhance_file</span><span class="p">(</span><span class="s2">&quot;input.nii.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;output.nii.gz&quot;</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;mps&quot;</span><span class="p">)</span>    <span class="c1"># Apple Silicon</span>
+</pre></div>
+</div>
+<p>Weights and intermediate tensors are kept on the selected device
+(<code class="docutils literal notranslate"><span class="pre">perform_everything_on_device=True</span></code>).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="simulation.html" class="btn btn-neutral float-left" title="Simulation Pipeline" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="citation.html" class="btn btn-neutral float-right" title="Citation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Toufiq Musah.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,394 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ulfsynth.simulate &mdash; ULF-Synth 0.1.7 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=ca7ad2ea"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            ULF-Synth
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">Command-Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../simulation.html">Simulation Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../enhancement.html">Enhancement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation.html">Citation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ULF-Synth</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ulfsynth.simulate</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ulfsynth.simulate</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Physics-guided ULF MRI simulation from high-field volumes.</span>
+
+<span class="sd">If you use ULF-Synth in your work, please cite:</span>
+
+<span class="sd">    Musah et al. &quot;ULF-Synth: Physics-Guided Ultra-Low-Field MRI</span>
+<span class="sd">    Enhancement for Pediatric Neuroimaging.&quot; arXiv:2605.24625, 2026.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nibabel</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">gaussian_filter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.fft</span><span class="w"> </span><span class="kn">import</span> <span class="n">fftn</span><span class="p">,</span> <span class="n">ifftn</span><span class="p">,</span> <span class="n">fftshift</span><span class="p">,</span> <span class="n">ifftshift</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="n">B_HF</span> <span class="o">=</span> <span class="mf">1.5</span>
+<span class="n">B_ULF</span> <span class="o">=</span> <span class="mf">0.064</span>
+<span class="n">POLAR_SCALE</span> <span class="o">=</span> <span class="p">(</span><span class="n">B_ULF</span> <span class="o">/</span> <span class="n">B_HF</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+<span class="n">_CITED</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_citation</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">_CITED</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_CITED</span><span class="p">:</span>
+        <span class="n">_CITED</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;If you use ULF-Synth simulation in your work, please cite:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  Musah et al. </span><span class="se">\&quot;</span><span class="s2">ULF-Synth: Physics-Guided Ultra-Low-Field MRI</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  Enhancement for Pediatric Neuroimaging.</span><span class="se">\&quot;</span><span class="s2"> arXiv:2605.24625, 2026.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="to_kspace">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.to_kspace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_kspace</span><span class="p">(</span><span class="n">vol</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">fftshift</span><span class="p">(</span><span class="n">fftn</span><span class="p">(</span><span class="n">vol</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="to_ispace">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.to_ispace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_ispace</span><span class="p">(</span><span class="n">K</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K</span><span class="p">)))</span></div>
+
+
+
+<div class="viewcode-block" id="to_complex_ispace">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.to_complex_ispace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">to_complex_ispace</span><span class="p">(</span><span class="n">K</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="object_mask">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.object_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">object_mask</span><span class="p">(</span><span class="n">vol</span><span class="p">,</span> <span class="n">thresh</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+    <span class="n">normed</span> <span class="o">=</span> <span class="p">(</span><span class="n">vol</span> <span class="o">-</span> <span class="n">vol</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">vol</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">vol</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">normed</span> <span class="o">&gt;</span> <span class="n">thresh</span></div>
+
+
+
+<div class="viewcode-block" id="apply_b0_t2star_decay">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.apply_b0_t2star_decay">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_b0_t2star_decay</span><span class="p">(</span><span class="n">I_complex</span><span class="p">,</span> <span class="n">T2</span><span class="p">,</span> <span class="n">TE</span><span class="p">,</span> <span class="n">b0_strength</span><span class="p">,</span> <span class="n">smoothness</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">I_complex</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">B0_map</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">smoothness</span><span class="p">)</span> <span class="o">*</span> <span class="n">b0_strength</span>
+    <span class="n">gx</span><span class="p">,</span> <span class="n">gy</span><span class="p">,</span> <span class="n">gz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">B0_map</span><span class="p">)</span>
+    <span class="n">grad_B0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">gx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">gy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">gz</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">grad_B0</span> <span class="o">/=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">grad_B0</span><span class="p">,</span> <span class="mi">95</span><span class="p">)</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="n">T2star</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">((</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">T2</span><span class="p">)</span> <span class="o">+</span> <span class="n">k</span> <span class="o">*</span> <span class="n">grad_B0</span> <span class="o">+</span> <span class="n">eps</span><span class="p">)</span>
+    <span class="n">decay</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">TE</span> <span class="o">/</span> <span class="n">T2star</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">I_complex</span> <span class="o">*</span> <span class="n">decay</span></div>
+
+
+
+<div class="viewcode-block" id="noisy_kspace">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.noisy_kspace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">noisy_kspace</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">I_ref</span><span class="p">,</span> <span class="n">signal_target</span><span class="p">):</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.05</span>
+    <span class="n">K_scaled</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">K</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">object_mask</span><span class="p">(</span><span class="n">I_ref</span><span class="p">)</span>
+    <span class="n">I_scaled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K_scaled</span><span class="p">)))</span>
+    <span class="n">signal_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">I_scaled</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">signal_power</span> <span class="o">/</span> <span class="p">(</span><span class="n">signal_target</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">))</span>
+    <span class="n">noise_img</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="o">*</span><span class="n">I_scaled</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="o">*</span><span class="n">I_scaled</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">K_noisy</span> <span class="o">=</span> <span class="n">K_scaled</span> <span class="o">+</span> <span class="n">fftshift</span><span class="p">(</span><span class="n">fftn</span><span class="p">(</span><span class="n">noise_img</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">K_noisy</span></div>
+
+
+
+<div class="viewcode-block" id="kspace_crop">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.kspace_crop">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kspace_crop</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">crop_ratio</span><span class="p">):</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">ch</span><span class="p">,</span> <span class="n">cw</span><span class="p">,</span> <span class="n">cd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">H</span> <span class="o">*</span> <span class="n">crop_ratio</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">W</span> <span class="o">*</span> <span class="n">crop_ratio</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">D</span> <span class="o">*</span> <span class="n">crop_ratio</span><span class="p">)</span>
+    <span class="n">h0</span><span class="p">,</span> <span class="n">w0</span><span class="p">,</span> <span class="n">d0</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span> <span class="o">-</span> <span class="n">ch</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">W</span> <span class="o">-</span> <span class="n">cw</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="n">cd</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">K_cropped</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">complex</span><span class="p">)</span>
+    <span class="n">K_cropped</span><span class="p">[</span><span class="n">h0</span><span class="p">:</span><span class="n">h0</span><span class="o">+</span><span class="n">ch</span><span class="p">,</span> <span class="n">w0</span><span class="p">:</span><span class="n">w0</span><span class="o">+</span><span class="n">cw</span><span class="p">,</span> <span class="n">d0</span><span class="p">:</span><span class="n">d0</span><span class="o">+</span><span class="n">cd</span><span class="p">]</span> <span class="o">=</span> <span class="n">K</span><span class="p">[</span><span class="n">h0</span><span class="p">:</span><span class="n">h0</span><span class="o">+</span><span class="n">ch</span><span class="p">,</span> <span class="n">w0</span><span class="p">:</span><span class="n">w0</span><span class="o">+</span><span class="n">cw</span><span class="p">,</span> <span class="n">d0</span><span class="p">:</span><span class="n">d0</span><span class="o">+</span><span class="n">cd</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">K_cropped</span></div>
+
+
+
+<div class="viewcode-block" id="undersample_kspace">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.undersample_kspace">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">undersample_kspace</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">acceleration</span><span class="p">,</span> <span class="n">center_fraction</span><span class="p">):</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">K</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="n">ch</span><span class="p">,</span> <span class="n">cw</span><span class="p">,</span> <span class="n">cd</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">H</span> <span class="o">*</span> <span class="n">center_fraction</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">W</span> <span class="o">*</span> <span class="n">center_fraction</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">D</span> <span class="o">*</span> <span class="n">center_fraction</span><span class="p">)</span>
+    <span class="n">h0</span><span class="p">,</span> <span class="n">w0</span><span class="p">,</span> <span class="n">d0</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span> <span class="o">-</span> <span class="n">ch</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">W</span> <span class="o">-</span> <span class="n">cw</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">D</span> <span class="o">-</span> <span class="n">cd</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">h0</span><span class="p">:</span><span class="n">h0</span><span class="o">+</span><span class="n">ch</span><span class="p">,</span> <span class="n">w0</span><span class="p">:</span><span class="n">w0</span><span class="o">+</span><span class="n">cw</span><span class="p">,</span> <span class="n">d0</span><span class="p">:</span><span class="n">d0</span><span class="o">+</span><span class="n">cd</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">outer</span> <span class="o">=</span> <span class="o">~</span><span class="n">mask</span>
+    <span class="n">n_sample</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">outer</span><span class="p">)</span> <span class="o">/</span> <span class="n">acceleration</span><span class="p">)</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">outer</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">n_sample</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">idx</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">idx</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">idx</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">K_us</span> <span class="o">=</span> <span class="n">K</span> <span class="o">*</span> <span class="n">mask</span>
+    <span class="n">I_original</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K</span><span class="p">)))</span>
+    <span class="n">I_us</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K_us</span><span class="p">)))</span> <span class="o">*</span> <span class="n">object_mask</span><span class="p">(</span><span class="n">I_original</span><span class="p">,</span> <span class="n">thresh</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fftshift</span><span class="p">(</span><span class="n">fftn</span><span class="p">(</span><span class="n">I_us</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="apply_b0_inhomogeneity">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.apply_b0_inhomogeneity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_b0_inhomogeneity</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">distortion_strength</span><span class="p">,</span> <span class="n">smoothness</span><span class="p">):</span>
+    <span class="n">I_complex</span> <span class="o">=</span> <span class="n">ifftn</span><span class="p">(</span><span class="n">ifftshift</span><span class="p">(</span><span class="n">K</span><span class="p">))</span>
+    <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">I_complex</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">field_map</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">),</span> <span class="n">sigma</span><span class="o">=</span><span class="n">smoothness</span><span class="p">)</span> <span class="o">*</span> <span class="n">distortion_strength</span>
+    <span class="n">I_distorted</span> <span class="o">=</span> <span class="n">I_complex</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">2</span><span class="n">j</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">field_map</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fftshift</span><span class="p">(</span><span class="n">fftn</span><span class="p">(</span><span class="n">I_distorted</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="sample_params">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.sample_params">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sample_params</span><span class="p">(</span><span class="n">rng</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sample random simulation parameters.</span>
+
+<span class="sd">    Returns a dictionary of physics parameters that control the ULF</span>
+<span class="sd">    degradation pipeline.  Each call draws fresh random values from</span>
+<span class="sd">    pre-defined distributions that model realistic 0.064 T acquisitions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rng: Optional random number generator (``numpy.random`` or</span>
+<span class="sd">            ``numpy.random.Generator``).  Defaults to ``numpy.random``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict with keys ``T2``, ``TE``, ``b0_strength``, ``smoothness``,</span>
+<span class="sd">        ``k``, ``signal_target``, ``crop_ratio``, ``acceleration``,</span>
+<span class="sd">        ``center_fraction``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rng</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;T2&quot;</span><span class="p">:</span>               <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.070</span><span class="p">,</span> <span class="mf">0.090</span><span class="p">),</span>
+        <span class="s2">&quot;TE&quot;</span><span class="p">:</span>               <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.100</span><span class="p">,</span> <span class="mf">0.130</span><span class="p">),</span>
+        <span class="s2">&quot;b0_strength&quot;</span><span class="p">:</span>      <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.040</span><span class="p">),</span>
+        <span class="s2">&quot;smoothness&quot;</span><span class="p">:</span>       <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">45</span><span class="p">),</span>
+        <span class="s2">&quot;k&quot;</span><span class="p">:</span>                <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+        <span class="s2">&quot;signal_target&quot;</span><span class="p">:</span>    <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+        <span class="s2">&quot;crop_ratio&quot;</span><span class="p">:</span>       <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">),</span>
+        <span class="s2">&quot;acceleration&quot;</span><span class="p">:</span>     <span class="nb">int</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">p</span><span class="o">=</span><span class="p">[</span><span class="mf">0.7</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">])),</span>
+        <span class="s2">&quot;center_fraction&quot;</span><span class="p">:</span>  <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">),</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="simulate_ulf">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.simulate_ulf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_ulf</span><span class="p">(</span><span class="n">hf_path</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synthesize a ULF volume from a high-field NIfTI file.</span>
+
+<span class="sd">    Applies the full physics-guided degradation pipeline: polarisation</span>
+<span class="sd">    scaling, T2\\* decay with B0 inhomogeneity, thermal noise,</span>
+<span class="sd">    k-space cropping, undersampling, and off-resonance distortion.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        hf_path: Path to the input high-field NIfTI file.</span>
+<span class="sd">        seed: Random seed for reproducibility.  ``None`` = non-deterministic.</span>
+<span class="sd">        params: Parameter dict (see :func:`sample_params`).</span>
+<span class="sd">            ``None`` = sample fresh parameters.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple of ``(ulf_volume, affine, header, params)`` where</span>
+<span class="sd">        ``ulf_volume`` is a ``(H, W, D)`` float32 array, ``affine``</span>
+<span class="sd">        and ``header`` are copied from the input, and ``params`` is</span>
+<span class="sd">        the parameter dict used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">sample_params</span><span class="p">()</span>
+
+    <span class="n">hf_img</span> <span class="o">=</span> <span class="n">nib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">hf_path</span><span class="p">)</span>
+    <span class="n">I_hf</span> <span class="o">=</span> <span class="n">hf_img</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">()</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">hf_img</span><span class="o">.</span><span class="n">affine</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">hf_img</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">I_scaled</span> <span class="o">=</span> <span class="n">POLAR_SCALE</span> <span class="o">*</span> <span class="n">I_hf</span>
+    <span class="n">K_hf</span> <span class="o">=</span> <span class="n">to_kspace</span><span class="p">(</span><span class="n">I_scaled</span><span class="p">)</span>
+    <span class="n">I_complex</span> <span class="o">=</span> <span class="n">to_complex_ispace</span><span class="p">(</span><span class="n">K_hf</span><span class="p">)</span>
+
+    <span class="n">I_b0</span> <span class="o">=</span> <span class="n">apply_b0_t2star_decay</span><span class="p">(</span>
+        <span class="n">I_complex</span><span class="p">,</span>
+        <span class="n">T2</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;T2&quot;</span><span class="p">],</span>
+        <span class="n">TE</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;TE&quot;</span><span class="p">],</span>
+        <span class="n">b0_strength</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;b0_strength&quot;</span><span class="p">],</span>
+        <span class="n">smoothness</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;smoothness&quot;</span><span class="p">],</span>
+        <span class="n">k</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;k&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="n">K_b0</span> <span class="o">=</span> <span class="n">to_kspace</span><span class="p">(</span><span class="n">I_b0</span><span class="p">)</span>
+    <span class="n">K_noisy</span> <span class="o">=</span> <span class="n">noisy_kspace</span><span class="p">(</span><span class="n">K_b0</span><span class="p">,</span> <span class="n">I_scaled</span><span class="p">,</span> <span class="n">signal_target</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;signal_target&quot;</span><span class="p">])</span>
+
+    <span class="n">K_crop</span> <span class="o">=</span> <span class="n">kspace_crop</span><span class="p">(</span><span class="n">K_noisy</span><span class="p">,</span> <span class="n">crop_ratio</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;crop_ratio&quot;</span><span class="p">])</span>
+
+    <span class="n">K_under</span> <span class="o">=</span> <span class="n">undersample_kspace</span><span class="p">(</span>
+        <span class="n">K_crop</span><span class="p">,</span>
+        <span class="n">acceleration</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;acceleration&quot;</span><span class="p">],</span>
+        <span class="n">center_fraction</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;center_fraction&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="n">K_final</span> <span class="o">=</span> <span class="n">apply_b0_inhomogeneity</span><span class="p">(</span>
+        <span class="n">K_under</span><span class="p">,</span>
+        <span class="n">distortion_strength</span><span class="o">=</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;b0_strength&quot;</span><span class="p">],</span>
+        <span class="n">smoothness</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;smoothness&quot;</span><span class="p">]</span> <span class="o">//</span> <span class="mi">10</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+    <span class="n">I_ulf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">to_ispace</span><span class="p">(</span><span class="n">K_final</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">I_ulf</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">params</span></div>
+
+
+
+<div class="viewcode-block" id="simulate_file">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.simulate_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_file</span><span class="p">(</span><span class="n">hf_path</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simulate ULF from a single file and save the result.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        hf_path: Input high-field NIfTI path.</span>
+<span class="sd">        out_path: Output ULF NIfTI path.</span>
+<span class="sd">        seed: Random seed (``None`` = non-deterministic).</span>
+<span class="sd">        verbose: Print a summary line when done.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The parameter dict used for this simulation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_citation</span><span class="p">()</span>
+    <span class="n">I_ulf</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">simulate_ulf</span><span class="p">(</span><span class="n">hf_path</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">out_path</span><span class="p">))</span> <span class="ow">or</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">nib</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">nib</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">I_ulf</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">header</span><span class="p">),</span> <span class="n">out_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">hf_path</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s2">  shape=</span><span class="si">{</span><span class="n">I_ulf</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">  range=[</span><span class="si">{</span><span class="n">I_ulf</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">I_ulf</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">params</span></div>
+
+
+
+<div class="viewcode-block" id="simulate_folder">
+<a class="viewcode-back" href="../../api.html#ulfsynth.simulate.simulate_folder">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_folder</span><span class="p">(</span><span class="n">in_dir</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simulate ULF for every NIfTI file in a folder.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        in_dir: Directory containing input high-field NIfTI files.</span>
+<span class="sd">        out_dir: Directory for output ULF NIfTI files (created if</span>
+<span class="sd">            needed).</span>
+<span class="sd">        seed: Base random seed.  Each file gets a deterministic</span>
+<span class="sd">            offset derived from its filename.</span>
+<span class="sd">        verbose: Print a summary line per file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of parameter dicts, one per file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_citation</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">in_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s1">&#39;.nii&#39;</span><span class="p">,</span> <span class="s1">&#39;.nii.gz&#39;</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">files</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No NIfTI files found in </span><span class="si">{</span><span class="n">in_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+        <span class="n">hf_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">in_dir</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+        <span class="n">out_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+        <span class="n">file_seed</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">seed</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">hash</span><span class="p">(</span><span class="n">fname</span><span class="p">))</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">31</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">simulate_file</span><span class="p">(</span><span class="n">hf_path</span><span class="p">,</span> <span class="n">out_path</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">file_seed</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Toufiq Musah.</p>
+  </div>
+
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

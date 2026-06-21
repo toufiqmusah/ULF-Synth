@@ -109,6 +109,21 @@ def apply_b0_inhomogeneity(K, distortion_strength, smoothness):
 
 
 def sample_params(rng=None):
+    """Sample random simulation parameters.
+
+    Returns a dictionary of physics parameters that control the ULF
+    degradation pipeline.  Each call draws fresh random values from
+    pre-defined distributions that model realistic 0.064 T acquisitions.
+
+    Args:
+        rng: Optional random number generator (``numpy.random`` or
+            ``numpy.random.Generator``).  Defaults to ``numpy.random``.
+
+    Returns:
+        dict with keys ``T2``, ``TE``, ``b0_strength``, ``smoothness``,
+        ``k``, ``signal_target``, ``crop_ratio``, ``acceleration``,
+        ``center_fraction``.
+    """
     if rng is None:
         rng = np.random
     return {
@@ -125,6 +140,24 @@ def sample_params(rng=None):
 
 
 def simulate_ulf(hf_path, seed=None, params=None):
+    """Synthesize a ULF volume from a high-field NIfTI file.
+
+    Applies the full physics-guided degradation pipeline: polarisation
+    scaling, T2\\* decay with B0 inhomogeneity, thermal noise,
+    k-space cropping, undersampling, and off-resonance distortion.
+
+    Args:
+        hf_path: Path to the input high-field NIfTI file.
+        seed: Random seed for reproducibility.  ``None`` = non-deterministic.
+        params: Parameter dict (see :func:`sample_params`).
+            ``None`` = sample fresh parameters.
+
+    Returns:
+        Tuple of ``(ulf_volume, affine, header, params)`` where
+        ``ulf_volume`` is a ``(H, W, D)`` float32 array, ``affine``
+        and ``header`` are copied from the input, and ``params`` is
+        the parameter dict used.
+    """
     if seed is not None:
         np.random.seed(seed)
     if params is None:
@@ -170,6 +203,17 @@ def simulate_ulf(hf_path, seed=None, params=None):
 
 
 def simulate_file(hf_path, out_path, seed=None, verbose=True):
+    """Simulate ULF from a single file and save the result.
+
+    Args:
+        hf_path: Input high-field NIfTI path.
+        out_path: Output ULF NIfTI path.
+        seed: Random seed (``None`` = non-deterministic).
+        verbose: Print a summary line when done.
+
+    Returns:
+        The parameter dict used for this simulation.
+    """
     _citation()
     I_ulf, affine, header, params = simulate_ulf(hf_path, seed=seed)
     os.makedirs(os.path.dirname(os.path.abspath(out_path)) or ".", exist_ok=True)
@@ -180,6 +224,19 @@ def simulate_file(hf_path, out_path, seed=None, verbose=True):
 
 
 def simulate_folder(in_dir, out_dir, seed=None, verbose=True):
+    """Simulate ULF for every NIfTI file in a folder.
+
+    Args:
+        in_dir: Directory containing input high-field NIfTI files.
+        out_dir: Directory for output ULF NIfTI files (created if
+            needed).
+        seed: Base random seed.  Each file gets a deterministic
+            offset derived from its filename.
+        verbose: Print a summary line per file.
+
+    Returns:
+        List of parameter dicts, one per file.
+    """
     _citation()
     os.makedirs(out_dir, exist_ok=True)
     files = sorted(f for f in os.listdir(in_dir) if f.endswith(('.nii', '.nii.gz')))
