@@ -69,6 +69,7 @@ def _download_weights(force=False):
         new.append(rel_path)
     if new:
         print("Downloading enhancement weights... ", end="", flush=True)
+        os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
         from huggingface_hub import hf_hub_download
         for rel_path in new:
             hf_hub_download(
@@ -76,7 +77,6 @@ def _download_weights(force=False):
                 filename=rel_path,
                 repo_type="model",
                 local_dir=CACHE_DIR,
-                local_dir_use_symlinks=False,
             )
         print("done.", flush=True)
     return CACHE_DIR

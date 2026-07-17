@@ -555,16 +555,21 @@ class nnUNetPredictor(object):
     
     def rec_mean(self, slicers, data):
         results_device = self.device
+        patch_size = self.configuration_manager.patch_size
 
         vol = torch.zeros((data.shape),dtype=torch.float32)
         n_predictions = torch.zeros(data.shape[1:], dtype=torch.float32)
+        from nnunetv2.inference.sliding_window_prediction import compute_gaussian
+        gaussian = compute_gaussian(tuple(patch_size), sigma_scale=1./8,
+                                    value_scaling_factor=10, device=results_device)
+        gaussian = gaussian.detach().cpu()
         for sl in tqdm(slicers, disable=not self.allow_tqdm):
             workon = data[sl][None]
             workon = workon.to(self.device, non_blocking=False)
             prediction = self._internal_maybe_mirror_and_predict(workon)[0].to(results_device)
             patch = prediction.detach().cpu()[0]
-            vol[sl] += patch
-            n_predictions[sl[1:]] += 1
+            vol[sl] += patch * gaussian
+            n_predictions[sl[1:]] += gaussian
         vol /= n_predictions
         return vol.half()
 
