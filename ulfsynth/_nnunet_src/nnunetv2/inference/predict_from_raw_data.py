@@ -231,11 +231,11 @@ class nnUNetPredictor(object):
                 my_init_kwargs)  # let's not unintentionally change anything in-place. Take this as a
             recursive_fix_for_json_export(my_init_kwargs)
             maybe_mkdir_p(output_folder)
-            save_json(my_init_kwargs, join(output_folder, 'predict_from_raw_data_args.json'))
-
-            # we need these two if we want to do things with the predictions like for example apply postprocessing
-            save_json(self.dataset_json, join(output_folder, 'dataset.json'), sort_keys=False)
-            save_json(self.plans_manager.plans, join(output_folder, 'plans.json'), sort_keys=False)
+            # save_json(my_init_kwargs, join(output_folder, 'predict_from_raw_data_args.json'))
+            #
+            # # we need these two if we want to do things with the predictions like for example apply postprocessing
+            # save_json(self.dataset_json, join(output_folder, 'dataset.json'), sort_keys=False)
+            # save_json(self.plans_manager.plans, join(output_folder, 'plans.json'), sort_keys=False)
         #######################
 
         # check if we need a prediction from the previous stage

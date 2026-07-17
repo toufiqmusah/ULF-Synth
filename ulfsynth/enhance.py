@@ -1,20 +1,19 @@
 """
 Enhance ULF MRI volumes using pretrained restoration models.
 
-If you use ULF-Synth enhancement in your work, please cite:
-
-    Musah et al. "ULF-Synth: Physics-Guided Ultra-Low-Field MRI
-    Enhancement for Pediatric Neuroimaging." arXiv:2605.24625, 2026.
+If you are using ULF-Synth, please cite the following publication:
+Musah, T., Calcagno, S., Salanitri, F.P., Li, X., Adewole, M.
+and Elbatel, M., 2026. ULF-Synth: Physics-Guided Ultra-Low-Field
+MRI Enhancement for Pediatric Neuroimaging.
+arXiv preprint arXiv:2605.24625.
 """
 
 import contextlib
 import os
 import sys
-import urllib.request
 from pathlib import Path
 
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "ulfsynth")
-WEIGHTS_REPO = "https://huggingface.co/toufiqmusah/ulfsynth-weights/resolve/main"
 MODEL_DIR = "Dataset2023/nnUNetTrainerMRCT_kspace__nnResUNetPlans__3d_fullres"
 WEIGHT_FILES = [
     f"{MODEL_DIR}/dataset.json",
@@ -24,7 +23,8 @@ WEIGHT_FILES = [
     f"{MODEL_DIR}/fold_all/checkpoint_final.pth",
 ]
 
-_BUNDLED_FORK = Path(__file__).resolve().parent / "_nnunet_src"
+_BUNDLED_NNUNET = Path(__file__).resolve().parent / "_nnunet_src"
+_BUNDLED_DYNARCH = Path(__file__).resolve().parent / "_dynarch_src"
 
 _CITED = False
 
@@ -34,17 +34,24 @@ def _citation():
     if not _CITED:
         _CITED = True
         print(
-            "If you use ULF-Synth enhancement in your work, please cite:\n"
-            "  Musah et al. \"ULF-Synth: Physics-Guided Ultra-Low-Field MRI\n"
-            "  Enhancement for Pediatric Neuroimaging.\" arXiv:2605.24625, 2026.\n",
+    "If you are using ULF-Synth, please cite the following publication: "
+    "Musah, T., Calcagno, S., Salanitri, F.P., Li, X., Adewole, M. "
+    "and Elbatel, M., 2026. ULF-Synth: Physics-Guided Ultra-Low-Field "
+    "MRI Enhancement for Pediatric Neuroimaging. "
+    "arXiv preprint arXiv:2605.24625.\n",
             flush=True,
         )
 
 
 def _ensure_nnunet():
-    nn_path = str(_BUNDLED_FORK)
-    if nn_path not in sys.path:
-        sys.path.insert(0, nn_path)
+    for p in [str(_BUNDLED_DYNARCH), str(_BUNDLED_NNUNET)]:
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    # Force reimport of bundled packages (evict any pre-loaded system copies)
+    for mod in list(sys.modules.keys()):
+        if 'dynamic_network_architectures' in mod or 'dynarch' in mod:
+            del sys.modules[mod]
+    import dynamic_network_architectures  # noqa: F401
     import nnunetv2  # noqa: F401
     from nnunetv2.training.nnUNetTrainer.nnUNetTrainerMRCT_kspace import (  # noqa: F401
         nnUNetTrainerMRCT_kspace,
@@ -59,12 +66,18 @@ def _download_weights(force=False):
         if os.path.exists(dest) and not force:
             continue
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        url = f"{WEIGHTS_REPO}/{rel_path}"
-        new.append((url, dest))
+        new.append(rel_path)
     if new:
         print("Downloading enhancement weights... ", end="", flush=True)
-        for url, dest in new:
-            urllib.request.urlretrieve(url, dest)
+        from huggingface_hub import hf_hub_download
+        for rel_path in new:
+            hf_hub_download(
+                repo_id="toufiqmusah/ulfsynth-weights",
+                filename=rel_path,
+                repo_type="model",
+                local_dir=CACHE_DIR,
+                local_dir_use_symlinks=False,
+            )
         print("done.", flush=True)
     return CACHE_DIR
 
@@ -77,6 +90,17 @@ def _run_inference(input_path, output_path, device="cuda"):
     _ensure_nnunet()
     _download_weights()
 
+    # Normalise output path: resolve to absolute, ensure parent exists
+    output_path = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # nnUNet appends file_ending to output_path, so strip it if present
+    file_ending = ".nii.gz"
+    if output_path.endswith(file_ending):
+        output_path = output_path[: -len(file_ending)]
+    elif output_path.endswith(".nii"):
+        output_path = output_path[: -len(".nii")]
+
     _dev = torch.device(device)
     from nnunetv2.inference.predict_from_raw_data import (
         nnUNetPredictor,
@@ -84,9 +108,9 @@ def _run_inference(input_path, output_path, device="cuda"):
 
     with open(os.devnull, "w") as _null, contextlib.redirect_stdout(_null):
         predictor = nnUNetPredictor(
-            tile_step_size=0.5,
+            tile_step_size=1.0,
             use_gaussian=True,
-            use_mirroring=True,
+            use_mirroring=False,
             perform_everything_on_device=True,
             device=_dev,
             verbose=False,
@@ -105,13 +129,6 @@ def _run_inference(input_path, output_path, device="cuda"):
             num_processes_preprocessing=2,
             num_processes_segmentation_export=2,
         )
-
-    for f in Path(output_path).parent.glob("predict_from_raw_data_args.json"):
-        f.unlink(missing_ok=True)
-    for f in Path(output_path).parent.glob("dataset.json"):
-        f.unlink(missing_ok=True)
-    for f in Path(output_path).parent.glob("plans.json"):
-        f.unlink(missing_ok=True)
 
 
 def enhance_file(input_path, output_path, device="cuda", verbose=True):

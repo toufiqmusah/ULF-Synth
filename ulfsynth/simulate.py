@@ -1,10 +1,11 @@
 """
 Physics-guided ULF MRI simulation from high-field volumes.
 
-If you use ULF-Synth in your work, please cite:
-
-    Musah et al. "ULF-Synth: Physics-Guided Ultra-Low-Field MRI
-    Enhancement for Pediatric Neuroimaging." arXiv:2605.24625, 2026.
+If you are using ULF-Synth, please cite the following publication:
+Musah, T., Calcagno, S., Salanitri, F.P., Li, X., Adewole, M.
+and Elbatel, M., 2026. ULF-Synth: Physics-Guided Ultra-Low-Field
+MRI Enhancement for Pediatric Neuroimaging.
+arXiv preprint arXiv:2605.24625.
 """
 
 import numpy as np
@@ -25,9 +26,11 @@ def _citation():
     if not _CITED:
         _CITED = True
         print(
-            "If you use ULF-Synth simulation in your work, please cite:\n"
-            "  Musah et al. \"ULF-Synth: Physics-Guided Ultra-Low-Field MRI\n"
-            "  Enhancement for Pediatric Neuroimaging.\" arXiv:2605.24625, 2026.\n",
+            "If you are using ULF-Synth, please cite the following publication: "
+            "Musah, T., Calcagno, S., Salanitri, F.P., Li, X., Adewole, M. "
+            "and Elbatel, M., 2026. ULF-Synth: Physics-Guided Ultra-Low-Field "
+            "MRI Enhancement for Pediatric Neuroimaging. "
+            "arXiv preprint arXiv:2605.24625.\n",
             flush=True,
         )
 

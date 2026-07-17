@@ -45,4 +45,4 @@ ulfsynth = "ulfsynth.cli:main"
 include = ["ulfsynth*"]
 
 [tool.ruff]
-exclude = ["ulfsynth/_nnunet_src"]
+exclude = ["ulfsynth/_nnunet_src", "ulfsynth/_dynarch_src"]

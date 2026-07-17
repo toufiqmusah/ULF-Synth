@@ -4,6 +4,7 @@ include pyproject.toml
 include setup.py
 recursive-include ulfsynth *.py
 recursive-include ulfsynth/_nnunet_src *
+recursive-include ulfsynth/_dynarch_src *
 recursive-include assets *
 prune ulfsynth/_nnunet_src/nnunetv2.egg-info
 prune ulfsynth/_nnunet_src/notebooks
