@@ -715,24 +715,27 @@ class nnUNetPredictor(object):
 
         empty_cache(self.device)
 
-        # Autocast can be annoying
-        # If the device_type is 'cpu' then it's slow as heck on some CPUs (no auto bfloat16 support detection)
-        # and needs to be disabled.
-        # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False
-        # is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
-        # So autocast will only be active if we have a cuda device.
         with torch.no_grad():
             with torch.autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
                 assert input_image.ndim == 4, 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'
 
                 if self.verbose: print(f'Input shape: {input_image.shape}')
-                if self.verbose: print("step_size:", self.tile_step_size)
-                if self.verbose: print("mirror_axes:", self.allowed_mirroring_axes if self.use_mirroring else None)
 
-                # if input_image is smaller than tile_size we need to pad it to tile_size.
+                # Pad to at least patch_size
                 data, slicer_revert_padding = pad_nd_image(input_image, self.configuration_manager.patch_size,
-                                                           'constant', {'value': 0}, True,
-                                                           None)
+                                                           'constant', {'value': 0}, True, None)
+
+                # Single pass for small volumes (fits GPU, no seam artifacts)
+                if self.device.type == 'cuda':
+                    try:
+                        workon = data[None].to(self.device, non_blocking=False)
+                        prediction = self._internal_maybe_mirror_and_predict(workon)[0]
+                        predicted_logits = prediction.to('cpu').half()
+                        del workon, prediction
+                        return predicted_logits[tuple([slice(None), *slicer_revert_padding[1:]])]
+                    except (torch.cuda.OutOfMemoryError, RuntimeError):
+                        print('Single-pass OOM, falling back to sliding window...')
+                        empty_cache(self.device)
 
                 slicers = self._internal_get_sliding_window_slicers(data.shape[1:])
 
