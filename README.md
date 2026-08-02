@@ -42,29 +42,55 @@ The ULF synthesis module models the key physical phenomena distinguishing ULF fr
 ## Installation
 
 ```bash
+pip install ulfsynth
+```
+
+Or install from source:
+
+```bash
 git clone https://github.com/toufiqmusah/ULF-Synth.git
 cd ULF-Synth
 pip install -e .
 ```
 
-This installs `ulfsynth` and all core dependencies (including PyTorch).
-The bundled [nnUNet translation fork](src/nn-translation/) is automatically
-discovered and installed during setup — no extra steps needed.
+---
 
-### Install from PyPI (future)
+## Python API
 
-```bash
-pip install ulfsynth          # simulation only
-pip install ulfsynth[full]    # with enhancement support
+### Enhancement
+
+```python
+from ulfsynth.enhance import enhance_file, enhance_folder
+
+# Single file (CPU)
+enhance_file("ulf_scan.nii.gz", "enhanced.nii.gz", device="cpu")
+
+# Batch folder (GPU)
+enhance_folder("ulf_scans/", "enhanced_scans/", device="cuda")
+```
+
+### Simulation
+
+```python
+from ulfsynth.simulate import simulate_ulf, simulate_file, simulate_folder
+
+# Get the ULF volume + metadata
+ulf_vol, affine, header, params = simulate_ulf("hf_scan.nii.gz", seed=42)
+
+# Save directly
+params = simulate_file("hf_scan.nii.gz", "ulf_scan.nii.gz", seed=42)
+
+# Process a folder
+results = simulate_folder("hf_scans/", "ulf_scans/", seed=42)
 ```
 
 ---
 
 ## CLI
 
-The `ulfsynth` package provides three commands:
+The `ulfsynth` package provides command-line tools for synthesis and enhancement:
 
-### `ulfsynth simulate` — ULF synthesis from HF volumes
+### Simulation
 
 ```bash
 # Single volume
@@ -77,69 +103,15 @@ ulfsynth simulate /path/to/hf/scans/ /path/to/ulf/scans/
 ulfsynth simulate input.nii.gz output.nii.gz --seed 42
 ```
 
-### `ulfsynth enhance` — ULF→HF restoration (requires nnUNet)
+### Enhancement
 
 ```bash
 # Single volume (CPU)
-ulfsynth enhance --device cpu input.nii.gz output.nii.gz
+ulfsynth enhance input.nii.gz output.nii.gz --device cpu
 
 # Folder of NIfTI files (GPU)
-ulfsynth enhance /path/to/ulf/scans/ /path/to/enhanced/scans/
-
-# Weights are downloaded from HuggingFace on first use.
-# Pre-download: ulfsynth download-weights
+ulfsynth enhance /path/to/ulf/scans/ /path/to/enhanced/scans/ --device cuda
 ```
-
-### `ulfsynth download-weights` — cache pretrained weights
-
-```bash
-ulfsynth download-weights
-```
-
-Caches model weights from [HuggingFace](https://huggingface.co/toufiqmusah/ulfsynth-weights) to `~/.cache/ulfsynth/`.
-
----
-
-## Python API
-
-### Simulation
-
-```python
-from ulfsynth.simulate import simulate_ulf, simulate_file, simulate_folder, sample_params
-
-# Generate one ULF volume with random parameters
-ulf_volume, affine, header, params = simulate_ulf("hf_input.nii.gz")
-
-# With a fixed seed
-ulf_volume, affine, header, params = simulate_ulf("hf_input.nii.gz", seed=42)
-
-# Custom parameters
-params = sample_params()
-params["signal_target"] = 30
-ulf_volume, affine, header, params = simulate_ulf("hf_input.nii.gz", params=params)
-
-# Single-file convenience (returns params dict)
-params = simulate_file("hf_input.nii.gz", "ulf_output.nii.gz", seed=42)
-
-# Batch folder processing (returns list of params)
-results = simulate_folder("hf_scans/", "ulf_scans/", seed=42)
-```
-
-Output preserves the input affine and header metadata.
-
-### Enhancement
-
-```python
-from ulfsynth.enhance import enhance_file, enhance_folder
-
-# Single file
-enhance_file("ulf_input.nii.gz", "enhanced_output.nii.gz", device="cpu")
-
-# Batch folder processing
-enhance_folder("ulf_scans/", "enhanced_scans/", device="cuda")
-```
-
-Requires nnUNet (`pip install -e src/nn-translation/`). Weights are auto-downloaded on first call.
 
 ---
 
