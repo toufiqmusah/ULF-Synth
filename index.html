@@ -370,38 +370,41 @@
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       <span class="label">Terminal</span>
     </div>
-    <pre><span class="cm"># Clone and install</span>
-git clone https://github.com/toufiqmusah/ULF-Synth.git
-cd ULF-Synth
-pip install -r requirements.txt</pre>
+    <pre><span class="cm"># Install ULF-Synth</span>
+pip install ulfsynth</pre>
   </div>
 
-  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">CLI</h3>
-  <div class="code-block">
-    <div class="code-header">
-      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-      <span class="label">Terminal</span>
-    </div>
-    <pre><span class="cm"># Single volume</span>
-python simulate_ulf.py input.nii.gz output.nii.gz
-
-<span class="cm"># Folder of NIfTI files</span>
-python simulate_ulf.py /path/to/hf/scans/ /path/to/ulf/scans/
-
-<span class="cm"># Reproducible seed</span>
-python simulate_ulf.py input.nii.gz output.nii.gz --seed 42</pre>
-  </div>
-
-  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">Python API</h3>
+  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">Enhancement</h3>
   <div class="code-block">
     <div class="code-header">
       <span class="dot"></span><span class="dot"></span><span class="dot"></span>
       <span class="label">Python</span>
     </div>
-    <pre><span class="kw">from</span> simulate_ulf <span class="kw">import</span> simulate_ulf
+    <pre><span class="kw">from</span> ulfsynth.enhance <span class="kw">import</span> enhance_file, enhance_folder
 
-ulf_volume, affine, header, params = <span class="fn">simulate_ulf</span>(<span class="str">"input.nii.gz"</span>)
-ulf_volume, affine, header, params = <span class="fn">simulate_ulf</span>(<span class="str">"input.nii.gz"</span>, seed=<span class="str">42</span>)</pre>
+<span class="cm"># Single file (CPU)</span>
+<span class="fn">enhance_file</span>(<span class="str">"ulf_scan.nii.gz"</span>, <span class="str">"enhanced.nii.gz"</span>, device=<span class="str">"cpu"</span>)
+
+<span class="cm"># Batch folder (GPU)</span>
+<span class="fn">enhance_folder</span>(<span class="str">"ulf_scans/"</span>, <span class="str">"enhanced_scans/"</span>, device=<span class="str">"cuda"</span>)</pre>
+  </div>
+
+  <h3 style="font-size:0.9rem; font-weight:600; margin-bottom:6px; margin-top:20px;">Simulation</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="label">Python</span>
+    </div>
+    <pre><span class="kw">from</span> ulfsynth.simulate <span class="kw">import</span> simulate_ulf, simulate_file, simulate_folder
+
+<span class="cm"># Get the ULF volume + metadata</span>
+ulf_vol, affine, header, params = <span class="fn">simulate_ulf</span>(<span class="str">"hf_scan.nii.gz"</span>, seed=<span class="str">42</span>)
+
+<span class="cm"># Save directly</span>
+params = <span class="fn">simulate_file</span>(<span class="str">"hf_scan.nii.gz"</span>, <span class="str">"ulf_scan.nii.gz"</span>, seed=<span class="str">42</span>)
+
+<span class="cm"># Process a folder</span>
+results = <span class="fn">simulate_folder</span>(<span class="str">"hf_scans/"</span>, <span class="str">"ulf_scans/"</span>, seed=<span class="str">42</span>)</pre>
   </div>
 </section>
 
