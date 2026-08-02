@@ -48,6 +48,16 @@
     max-width: 800px;
   }
 
+  header h1 a {
+    color: inherit;
+    text-decoration: none;
+    transition: color .15s ease-in-out;
+  }
+
+  header h1 a:hover {
+    color: #0056b3;
+  }
+
   .meta {
     display: flex;
     flex-wrap: wrap;
@@ -193,6 +203,26 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #999;
+    position: relative;
+  }
+
+  .copy-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-btn:hover {
+    color: #fff;
+    border-color: #777;
+    background: #333;
   }
 
   .code-block .code-header .dot {
@@ -288,9 +318,10 @@
 <div class="container">
 
 <header>
-  <h1>ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</h1>
+  <h1><a href="https://arxiv.org/abs/2605.24625">ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</a></h1>
   <div class="meta">
     <a class="badge" href="https://arxiv.org/abs/2605.24625"><img src="https://img.shields.io/badge/arXiv-2605.24625-b31b1b.svg" alt="arXiv"></a>
+    <a class="badge" href="https://pypi.org/project/ulfsynth/"><img src="https://img.shields.io/pypi/v/ulfsynth.svg" alt="PyPI"></a>
     <a href="https://github.com/toufiqmusah/ULF-Synth">GitHub</a>
     <a href="https://arxiv.org/abs/2605.24625">Paper</a>
     <a href="https://opensource.org/licenses/MIT">MIT License</a>
@@ -410,10 +441,11 @@ results = <span class="fn">simulate_folder</span>(<span class="str">"hf_scans/"<
 
 <section>
   <h2>Citation</h2>
-  <div class="citation">@misc{musah2026ulfsynth,
+  <div class="citation">@article{musah2026ulfsynth,
   title        = {ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging},
   author       = {Toufiq Musah and Salvatore Calcagno and Federica Proietto Salanitri and Xiaomeng Li and Maruf Adewole and Marawan Elbatel},
   year         = {2026},
+  journal      = {arXiv preprint arXiv:2605.24625},
   eprint       = {2605.24625},
   archivePrefix = {arXiv},
   url          = {https://arxiv.org/abs/2605.24625}
@@ -428,5 +460,52 @@ results = <span class="fn">simulate_folder</span>(<span class="str">"hf_scans/"<
 </footer>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.code-block').forEach(block => {
+      const header = block.querySelector('.code-header');
+      const pre = block.querySelector('pre');
+      if (header && pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.innerText = 'Copy';
+        btn.addEventListener('click', () => {
+          navigator.clipboard.writeText(pre.innerText.trim()).then(() => {
+            btn.innerText = 'Copied!';
+            setTimeout(() => { btn.innerText = 'Copy'; }, 2000);
+          });
+        });
+        header.appendChild(btn);
+      }
+    });
+
+    const citation = document.querySelector('.citation');
+    if (citation) {
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+      citation.parentNode.insertBefore(wrapper, citation);
+      wrapper.appendChild(citation);
+      
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.style.position = 'absolute';
+      btn.style.top = '12px';
+      btn.style.right = '12px';
+      btn.style.background = '#e0e0e0';
+      btn.style.borderColor = '#ccc';
+      btn.style.color = '#333';
+      btn.innerText = 'Copy BibTeX';
+      
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(citation.innerText.trim()).then(() => {
+          btn.innerText = 'Copied!';
+          setTimeout(() => { btn.innerText = 'Copy BibTeX'; }, 2000);
+        });
+      });
+      wrapper.appendChild(btn);
+    }
+  });
+</script>
 </body>
 </html>

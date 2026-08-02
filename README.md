@@ -1,13 +1,26 @@
-<p align="center">
-  <img src="assets/method.png" alt="ULF-Synth" width="100%">
-</p>
-
-<h1 align="center">ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</h1>
+<h1 align="center">
+  <a href="https://arxiv.org/abs/2605.24625" style="text-decoration:none; color:inherit;">ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging</a>
+</h1>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/2605.24625v1"><img src="https://img.shields.io/badge/arXiv-2605.24625-b31b1b.svg" alt="arXiv"></a>
+  <a href="https://arxiv.org/abs/2605.24625"><img src="https://img.shields.io/badge/arXiv-2605.24625-b31b1b.svg" alt="arXiv"></a>
+  <a href="https://pypi.org/project/ulfsynth/"><img src="https://img.shields.io/pypi/v/ulfsynth.svg" alt="PyPI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python"></a>
+</p>
+
+<p align="center">
+  <a href="#simulation-pipeline">Abstract</a> &bull;
+  <a href="#simulation-pipeline">Simulation Pipeline</a> &bull;
+  <a href="#qualitative-results">Qualitative Results</a> &bull;
+  <a href="#installation">Installation</a> &bull;
+  <a href="#python-api">Python API</a> &bull;
+  <a href="#cli">CLI</a> &bull;
+  <a href="#citation">Citation</a>
+</p>
+
+<p align="center">
+  <img src="assets/method.png" alt="ULF-Synth Framework Overview" width="100%">
 </p>
 
 ## Abstract
@@ -127,10 +140,11 @@ ulfsynth enhance /path/to/ulf/scans/ /path/to/enhanced/scans/ --device cuda
 ## Citation
 
 ```bibtex
-@misc{musah2026ulfsynth,
+@article{musah2026ulfsynth,
   title        = {ULF-Synth: Physics-Guided Ultra-Low-Field MRI Enhancement for Pediatric Neuroimaging},
   author       = {Toufiq Musah and Salvatore Calcagno and Federica Proietto Salanitri and Xiaomeng Li and Maruf Adewole and Marawan Elbatel},
   year         = {2026},
+  journal      = {arXiv preprint arXiv:2605.24625},
   eprint       = {2605.24625},
   archivePrefix = {arXiv},
   url          = {https://arxiv.org/abs/2605.24625}
