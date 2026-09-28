@@ -10,8 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#simulation-pipeline">Abstract</a> &bull;
-  <a href="#simulation-pipeline">Simulation Pipeline</a> &bull;
+  <a href="#abstract">Abstract</a> &bull;
   <a href="#qualitative-results">Qualitative Results</a> &bull;
   <a href="#installation">Installation</a> &bull;
   <a href="#python-api">Python API</a> &bull;
@@ -26,21 +25,6 @@
 ## Abstract
 
 Ultra-low-field (ULF) MRI enables portable and accessible neuroimaging, but suffers from low signal-to-noise ratio and limited spatial resolution relative to high-field (HF) systems. Acquiring paired ULF–HF data for supervised enhancement is often infeasible, particularly in resource-limited settings. We introduce **ULF-Synth**, a framework combining: (i) acquisition-based synthesis of realistic ULF images from HF volumes for large-scale paired training, and (ii) a spatial-frequency domain objective that prioritizes recovery of high-frequency anatomical detail. The formulation is architecture-agnostic, consistently improving structural similarity and perceptual fidelity across encoder-decoder, adversarial, and diffusion-based translation models. Trained exclusively on synthetic data, our models generalize to real 64 mT ULF acquisitions, improving multiclass brain segmentation and achieving higher radiologist preference and diagnostic acceptability in a blinded reader study.
-
----
-
-## Simulation Pipeline
-
-The ULF synthesis module models the key physical phenomena distinguishing ULF from HF acquisitions:
-
-|  | Effect | Implementation |
-|:---:|---|---|
-| 1 | **Signal scaling** | $(B_{{ULF}}/B_{{HF}})^2$ polarization ratio |
-| 2 | **T2\* decay & B0 inhomogeneity** | Spatially-varying exponential decay from random B0 field maps |
-| 3 | **Thermal noise** | Gaussian noise scaled to SNR 15–50 |
-| 4 | **k-space cropping** | Reduced resolution (45–55%) |
-| 5 | **k-space undersampling** | Accelerated acquisition (2×–3×) with center-out sampling |
-| 6 | **B0 off-resonance distortion** | Phase distortion from random B0 field maps |
 
 ---
 
